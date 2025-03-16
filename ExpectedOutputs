@@ -1,0 +1,62 @@
+Step 1: Generate Bloom Filter from Dataset B
+Before running the MapReduce job, we need to generate a Bloom filter from Dataset B (the smaller dataset).
+We execute the BloomFilterGenerator Java program, which reads datasetB.txt, constructs a Bloom filter, and stores it in HDFS.
+
+Command:
+    hadoop jar bloomfilter-generator.jar BloomFilterGenerator
+
+Dataset B (datasetB.txt - Keys for Filtering)
+2
+4
+
+
+Step 2: Run MapReduce Semi-Join Job
+Now, we execute the MapReduce job, where:
+The mappers load the Bloom filter from the Distributed Cache.
+They filter Dataset A based on Bloom filter membership.
+
+Command:
+    hadoop jar semi-join-job.jar SemiJoinDriver /input/datasetA /output/semi_join_result
+
+
+Step 3: Map Phase Execution
+Each mapper:
+Loads the Bloom filter.
+Checks if each join key exists in the Bloom filter.
+Emits only matching records.
+
+Dataset A (datasetA.txt - Input)
+1, Alice, Sales
+2, Bob, Engineering
+3, Charlie, HR
+4, David, Marketing
+5, Eva, Engineering
+
+Mapper Processing
+Record	Key in Bloom Filter?	Emitted?
+1, Alice, Sales	❌ No	❌ No
+2, Bob, Engineering	✅ Yes	✅ Yes
+3, Charlie, HR	❌ No	❌ No
+4, David, Marketing	✅ Yes	✅ Yes
+5, Eva, Engineering	❌ No	❌ No
+
+Mapper Output (Intermediate)
+2, Bob, Engineering
+4, David, Marketing
+
+
+Step 4: Reduce Phase Execution
+Since this is a semi-join, the reducer simply passes through the filtered records.
+
+Reducer Output (Final)
+2, Bob, Engineering
+4, David, Marketing
+
+
+Step 5: View Output
+Command:
+    hadoop fs -cat /output/semi_join_result/part-r-00000
+
+Output Display:
+2, Bob, Engineering
+4, David, Marketing
